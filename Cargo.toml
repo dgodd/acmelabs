@@ -5,3 +5,7 @@ authors = ["Dave Goddard <dave@goddard.id.au>"]
 edition = "2018"
 
 [dependencies]
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
+reqwest = "*"
