@@ -2,8 +2,8 @@
 extern crate serde_derive;
 
 use {
+    digitalocean::{api::Domain, request::Executable, DigitalOcean},
     std::error::Error,
-    digitalocean::{DigitalOcean, api::Domain, request::Executable}
 };
 
 #[derive(Deserialize, Debug)]
@@ -21,14 +21,21 @@ fn main() -> Result<(), Box<Error>> {
     let client = DigitalOcean::new(api_key)?;
 
     let records = Domain::get("goddard.id.au").records().execute(&client)?;
-    let record = records.iter().find(|&r| r.name() == "acmelabs").ok_or("acmelabs not found")?;
+    let record = records
+        .iter()
+        .find(|&r| r.name() == "acmelabs")
+        .ok_or("acmelabs not found")?;
     let (id, existing_ip) = (record.id().to_owned(), record.data().to_owned());
     println!("RECORD: {} -- {}", id, existing_ip);
 
     if myip == existing_ip {
         println!("acmelabs.goddard.id.au was up to date: {}", existing_ip);
     } else {
-        Domain::get("goddard.id.au").records().update(id).data(myip.to_owned()).execute(&client)?;
+        Domain::get("goddard.id.au")
+            .records()
+            .update(id)
+            .data(myip.to_owned())
+            .execute(&client)?;
         println!(
             "acmelabs.goddard.id.au was updated from {} to {}",
             existing_ip, myip
