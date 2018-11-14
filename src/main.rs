@@ -1,68 +1,37 @@
 #[macro_use]
 extern crate serde_derive;
 
+use {
+    std::error::Error,
+    digitalocean::{DigitalOcean, api::Domain, request::Executable}
+};
+
 #[derive(Deserialize, Debug)]
 struct Ipify {
     ip: String,
 }
 
-#[derive(Deserialize, Debug)]
-struct DnsRecord {
-    id: i32,
-    // type: String,
-    name: String,
-    data: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct ListDnsRecords {
-    domain_records: Vec<DnsRecord>,
-}
-
-fn main() -> Result<(), Box<std::error::Error>> {
-    let client = reqwest::Client::new();
-    let mut response = client.get("https://api.ipify.org?format=json").send()?;
+fn main() -> Result<(), Box<Error>> {
+    let mut response = reqwest::get("https://api.ipify.org?format=json")?;
     let ipify: Ipify = response.json()?;
-    println!("{:?}", ipify);
+    let myip = ipify.ip;
+    println!("MY IP: {:?}", myip);
 
-    let mut response = client
-        .get(&format!(
-            "https://api.digitalocean.com/v2/domains/{}/records",
-            "goddard.id.au"
-        ))
-        .header(
-            "Authorization",
-            format!("Bearer {}", std::env::var("DIGITALOCEAN_TOKEN")?),
-        )
-        .send()?;
-    let records: ListDnsRecords = response.json()?;
-    let record = records
-        .domain_records
-        .iter()
-        .find(|&r| r.name == "acmelabs")
-        .ok_or("acmelabs not found")?;
-    println!("{:?}", record);
+    let api_key = std::env::var("DIGITALOCEAN_TOKEN")?;
+    let client = DigitalOcean::new(api_key)?;
 
-    if record.data == ipify.ip {
-        println!("acmelabs.goddard.id.au was up to date: {}", record.data)
+    let records = Domain::get("goddard.id.au").records().execute(&client)?;
+    let record = records.iter().find(|&r| r.name() == "acmelabs").ok_or("acmelabs not found")?;
+    let (id, existing_ip) = (record.id().to_owned(), record.data().to_owned());
+    println!("RECORD: {} -- {}", id, existing_ip);
+
+    if myip == existing_ip {
+        println!("acmelabs.goddard.id.au was up to date: {}", existing_ip);
     } else {
-        let mut map = std::collections::HashMap::new();
-        map.insert("data", ipify.ip.to_owned());
-
-        let mut response = client
-            .put(&format!(
-                "https://api.digitalocean.com/v2/domains/{}/records/{}",
-                "goddard.id.au", record.id
-            ))
-            .json(&map)
-            .header(
-                "Authorization",
-                format!("Bearer {}", std::env::var("DIGITALOCEAN_TOKEN")?),
-            )
-            .send()?;
+        Domain::get("goddard.id.au").records().update(id).data(myip.to_owned()).execute(&client)?;
         println!(
             "acmelabs.goddard.id.au was updated from {} to {}",
-            record.data, ipify.ip
+            existing_ip, myip
         )
     }
 
