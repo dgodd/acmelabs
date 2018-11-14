@@ -10,3 +10,6 @@ serde_json = "*"
 serde_derive = "*"
 reqwest = "*"
 digitalocean = "*"
+
+[profile.release]
+lto = true
