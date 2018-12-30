@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<Error>> {
     let myip = ipify.ip;
     println!("MY IP: {:?}", myip);
 
-    let api_key = std::env::var("DIGITALOCEAN_TOKEN")?;
+    let api_key = std::env::var("DIGITALOCEAN_TOKEN").map_err(|_| "env var DIGITALOCEAN_TOKEN not found")?;
     let client = DigitalOcean::new(api_key)?;
 
     let records = Domain::get("goddard.id.au").records().execute(&client)?;
