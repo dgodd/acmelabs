@@ -1,8 +1,6 @@
-#[macro_use]
-extern crate serde_derive;
-
 use {
     digitalocean::{api::Domain, request::Executable, DigitalOcean},
+    serde_derive::Deserialize,
     std::error::Error,
 };
 
